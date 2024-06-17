@@ -3,8 +3,11 @@ import re
 import os
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib as mpl
 from datetime import datetime
 import numpy as np
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 #open file
 with open('/nfshome/natpenn/Desktop/CROCv2-iter2/wafer_N61F26-15F3_20240413_022359.log', 'r') as file:
@@ -42,9 +45,6 @@ for line in log_content:
     if wafermatch:
         waferid = str(wafermatch.group(1))
     
-print("Wafer ID: " + str(waferid))
-print("Start date: " + str(str([log_content[0]])[:12][2:]))
-
 #Remove duplicate errors (for each chip)
 errors = list(set(errors))
 errors = [i[2:] for i in errors]
@@ -112,6 +112,8 @@ for x in errors:
         other_errors.append(x)
     
 #printing
+print("Wafer ID: " + str(waferid))
+print("Start date: " + str(str([log_content[0]])[:12][2:]))
 print("------")
 print("There were " + str(len(errors)+len(nochiperrors)) + " total error messages in 1 wafer.")
 print("Number of scan chain errors: " + str(scan_chain))
@@ -125,23 +127,23 @@ print("Number of DAQ digital scan errors: " + str(daq_digital))
 print("Number of DAC calibration errors: " + str(dac_calibration))
 print("------")
 if testing_aborted > 0:
-    print(str(testing_aborted) + " chip(s) did not complete testing (" + ', '.join(failedtestchips) + ").")
+    testing_message = f"{testing_aborted} chip(s) did not complete testing (chip ID(s): {', '.join(failedtestchips)})."
 elif testing_aborted == 0:
-    print("All chips completed testing")
+    testing_message = "All chips completed testing"
 print("Total number of dead pixels: " + str(dead_pixels) + " (of 145152 in 1 wafer)")
 print("Other errors (" + str(len(other_errors)) + "): ") 
 for error in other_errors:
     print("   - " + str(error))
 
 # Plot
+mpl.rcParams.update({'font.size': 18})
 data = {'Scan Chain Errors':scan_chain,'VDD':vdd,'Dead Pixels':register_error,'Digital Scan':digital_scan,'DAQ Func Prog Term':daq_func_prog_term,'DAQ Digital Scan':daq_digital,'Analog Scan':analog_scan,'DAC Calibration':dac_calibration,'other':len(other_errors)}
 
 alph_data = dict(sorted(data.items()))
 clean_data = {k:v for k,v in alph_data.items() if v > 0}
 labels = list(clean_data.keys())
 values = list(clean_data.values())
-
-fig = plt.figure(figsize = (10, 6))
+fig = plt.figure(figsize = (12, 12))
 
 # creating the bar plot
 plt.bar(labels, values, color ='teal', 
@@ -158,12 +160,51 @@ now = datetime.now()
 current_dt = now.strftime("%m-%d-%Y.%H:%M:%S")
 
 #plt.savefig(str(current_dt) + '.CROCerrortest.pdf')
-plt.savefig(str(current_dt) + '.Wafer' + str(waferid) + 'errors.png')
+plt.savefig("plot.png")
+plt.close()
 
+#Saving to PDF
+def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, scan_chain, analog_scan, digital_scan, vdd, register_error, daq_func_prog_term, prog_err, daq_digital, dac_calibration, testing_message, dead_pixels, other_errors, plot_filename):
+    # Create a new PDF file
+    c = canvas.Canvas(output_filename, pagesize=letter)
+    # Define text content
+    text_content = [
+        f"Wafer ID: {waferid}",
+        f"Start date: {str(log_content[0])[:10]}",
+        "------",
+        f"There were {len(errors) + len(nochiperrors)} total error messages in 1 wafer.",
+        f"Number of scan chain errors: {str(scan_chain)}",
+        f"Number of analog scan failures: {str(analog_scan)}",
+        f"Number of digital scan failures: {str(digital_scan)}",
+        f"Number of VDD errors: {str(vdd)}",
+        f"Number of chips with dead pixels: {str(register_error)}",
+        f"Number of DAQ function program terminations: {str(daq_func_prog_term)}",
+        f"Number of programming errors: {str(prog_err)}",
+        f"Number of DAQ digital scan errors: {str(daq_digital)}",
+        f"Number of DAC calibration errors: {str(dac_calibration)}",
+        f"{testing_message}",
+        f"Total number of dead pixels: {str(dead_pixels)} (of 145152 in 1 wafer)",
+        f"Other errors ({str(len(other_errors))}):" 
+    ]
 
+    for error in other_errors:
+        text_content.append(f"   - {str(error)}")
+    
+    # Set initial y position for text
+    y = 720
 
+    # Write content to the PDF
+    for line in text_content:
+        c.drawString(72, y, line)
+        y -= 20  # Adjust the y position for the next line
+    
+    #Add second page
+    c.showPage()
+    c.drawImage(plot_filename, 72, 162, width=468, height=468)
+    c.save()
+    print(f'PDF saved to {output_filename}')
 
-        
-
-
-
+if __name__ == '__main__':
+    output_filename = f"{current_dt}.Wafer{waferid}errors.pdf"
+    plot_filename = "plot.png"
+    save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, scan_chain, analog_scan, digital_scan, vdd, register_error, daq_func_prog_term, prog_err, daq_digital, dac_calibration, testing_message, dead_pixels, other_errors, plot_filename)
