@@ -155,11 +155,8 @@ plt.ylabel("No. Occurrences")
 plt.title("Number of Errors of Each Type")
 plt.xticks(rotation=-30, ha='left')
 
-#save as file
-now = datetime.now()
-current_dt = now.strftime("%m-%d-%Y.%H:%M:%S")
-
-#plt.savefig(str(current_dt) + '.CROCerrortest.pdf')
+#save as png
+plt.tight_layout()
 plt.savefig("plot.png")
 plt.close()
 
@@ -204,6 +201,8 @@ def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, sca
     c.save()
     print(f'PDF saved to {output_filename}')
 
+now = datetime.now()
+current_dt = now.strftime("%m-%d-%Y.%H:%M:%S")
 if __name__ == '__main__':
     output_filename = f"{current_dt}.Wafer{waferid}errors.pdf"
     plot_filename = "plot.png"
