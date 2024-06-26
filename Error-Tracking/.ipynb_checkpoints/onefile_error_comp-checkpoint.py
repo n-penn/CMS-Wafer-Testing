@@ -64,6 +64,7 @@ dead_pixels = 0
 testing_aborted = 0
 test_end = 0
 prog_err = 0
+pixel_register = 0
 daq_digital = 0
 daq_digital_2 = 0 #error message with the previous
 dac_calibration = 0
@@ -72,19 +73,20 @@ other_errors = []
 pattern2 = r'Register .* failed the test'
 pattern3 = r'Number of errors: .*'
 xxx = 0
+repeats = 0
 
 #count each error type
 for x in errors:
     match2 = re.search(pattern2, x)
     match3 = re.search(pattern3, x)
     match4 = re.search(testabortpattern, x)
-    if x==("Scan chain test failed!"):
+    if 'Scan chain test failed!' in x:
         scan_chain = scan_chain + 1
     elif x==("Analog scan failed!"):
         analog_scan = analog_scan + 1
     elif x==("Digital scan failed!"):
         digital_scan = digital_scan + 1
-    elif x==("DAQ function write_vdd_trim_bits terminated unexpectedly!"):
+    elif x==("DAQ function write_vdd_trim_bits terminated unexpectedly!") or 'VDD' in x:
         vdd = vdd + 1
     elif x==("Register W&R errors detected!"):
         register_error = register_error + 1
@@ -94,20 +96,20 @@ for x in errors:
         test_end = test_end + 1
     elif x==("Could not program the chip!"):
         prog_err = prog_err + 1
+    elif x==("Pixel registers test failed!"):
+        pixel_register = pixel_register + 1
     elif x==("DAQ function digital_scan terminated unexpectedly!"):
         daq_digital = daq_digital + 1
-    elif x==("Digital scan failed due to DAQ error!"):
-        daq_digital_2 = daq_digital_2 + 1
-    elif x==("DAQ function dac_calibration terminated unexpectedly!"):
+    elif x==("DAQ function dac_calibration terminated unexpectedly!") or x==("DACs calibration failed!"):
         dac_calibration = dac_calibration + 1
-    elif x==("DACs calibration failed! Continuing the testing..."):
-        dac_calibration_2 = dac_calibration_2 + 1
     elif match2:
         dead_pixels = dead_pixels + 1
     elif match3:
         xxx = xxx + 1
     elif match4:
         testing_aborted = testing_aborted + 1
+    elif x==("Aborting testing") or x==("Aborting testing!") or x==("Digital scan failed before completion!") or x==("Digital scan failed") or x==("Digital scan failed due to DAQ error!") or x==("DACs calibration failed! Continuing the testing...") or x==("Testing of pixel registers failed!") or x==("More than 150 register errors!") or x==("Failing pixel registers above online cut!"):
+        repeats = repeats + 1
     else:
         other_errors.append(x)
     
