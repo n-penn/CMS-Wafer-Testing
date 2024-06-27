@@ -332,47 +332,60 @@ low = []
 medlow = []
 medhigh = []
 high = []
+low_c = []
+medlow_c = []
+medhigh_c = []
+high_c = []
 for i in range(len(contactheight)):
     value_height = contactheight[i]
     value_chip = chiplocations[i]
     if value_height < min_height + bin_size:
         low.append(value_chip)
+        low_c.append(value_height)
     elif value_height < min_height + 2 * bin_size:
         medlow.append(value_chip)
+        medlow_c.append(value_height)
     elif value_height < min_height + 3 * bin_size:
         medhigh.append(value_chip)
+        medhigh_c.append(value_height)
     else:
         high.append(value_chip)
+        high_c.append(value_height)
         
-#format lists
-low = [eval(item) for item in low]
-medlow = [eval(item) for item in medlow]
-medhigh = [eval(item) for item in medhigh]
-high = [eval(item) for item in high]
+#make dictionaries
+low_dict = {k:v for k,v in zip(low,low_c)}
+medlow_dict = {k:v for k,v in zip(medlow,medlow_c)}
+medhigh_dict = {k:v for k,v in zip(medhigh,medhigh_c)}
+high_dict = {k:v for k,v in zip(high,high_c)}
 
 
 #set statuses
 chip_statuses = {
-		( 1, ''): low,    
-		( 2, ''): medlow,                
-		( 3, ''): medhigh,  
-		( 4, ''): high,               
+		( 1, ''): low_dict,    
+		( 2, ''): medlow_dict,                
+		( 3, ''): medhigh_dict, 
+		( 4, ''): high_dict,              
     }
 
-TopographyMap.STATUS_COLORS = {1: '#A5EFFE', 2: '#6BD2E7', 3: '#21AAC6', 4: '#067991'}
+TopographyMap.STATUS_COLORS = {1: '#A5EFFE', 2: '#71d5ea', 3: '#1aa1bc', 4: '#067991'}
 TopographyMap.STATUS_NAMES =  {1: 'l',       2: 'ml',       3: 'mh',       4: 'h'}
 
 
 #Create map
+loop = 0
 ch_type ='CROCv2'
 wafer_map = TopographyMap(chip_type=ch_type, title=f'{ch_type} (range: {min_height}um to {max_height}um)')
-for (chip_status, chip_value), chips in chip_statuses.items():
-    for idx, ch_id in enumerate(chips):
-        subtext = f"{contactheight[idx]}um"
-        wafer_map.set_chip(ch_id, chip_status, subtext)
+for (chip_status, chip_value), x in chip_statuses.items():
+    for chips,heights in x.items():
+        subtext = f"{heights}um"
+        wafer_map.set_chip(eval(chips), chip_status, subtext)
+        loop = loop + 1
+    
+print(f'Range: {min_height}um to {max_height}um ({max_height-min_height}um)')
+print(f'Bins:\n - Low (l): {min_height}-{int(min_height+bin_size)}um\n - Medium low (ml): {int(min_height+bin_size)}-{int(min_height+bin_size*2)}um\n - Medium high (mh): {int(min_height+bin_size*2)}-{int(min_height+bin_size*3)}um\n - High (h): {int(min_height+bin_size*3)}-{int(max_height)}um')
         
 #CHANGE OUT PATH
-dir = os.path.expanduser('~/Desktop')
+dir = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Topography-Maps')
 
 #Save map
 out_path = os.path.join(dir, f'topography_map_{ch_type}_{waferid}.pdf')
