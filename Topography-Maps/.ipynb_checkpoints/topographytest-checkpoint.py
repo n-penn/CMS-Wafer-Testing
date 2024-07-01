@@ -1,16 +1,21 @@
-#Topography map python
+#test topography map
 #TODO: 
     #Do something with Asymmetry?
 
 import os
 import numpy as np
 import re
+
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as mticker
+
+#from wlt.config import main_config
 from wlt.duts.wafers import WAFER_MAPS
 from wlt.wafermap import WaferMap
         
+#Finding and setting chip statuses        
+
 #Open file
 with open(os.path.expanduser('~/Desktop/log_files/2nd_probe_card/wafer_NC0W14-03B6_20240627_115829.log'), 'r') as file:
     log_content = file.readlines()
