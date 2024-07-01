@@ -1,7 +1,4 @@
 #Topography map python
-#TODO: 
-    #Do something with Asymmetry?
-
 import os
 import numpy as np
 import re
@@ -76,7 +73,27 @@ for i in range(len(contactheight)):
     else:
         high.append(value_chip)
         high_c.append(value_height)
-        
+
+#find out which chips are at the median, max, and min height
+median = np.median(contactheight)
+if median not in contactheight:
+    greater_than_median = [num for num in contactheight if num > median]
+    next_highest = min(greater_than_median)
+    '''number of chips at next highest value above median'''
+median_chips = []
+next_chips = []
+max_chips = []
+min_chips = []
+for i in range(len(contactheight)):
+    if contactheight[i] == median:
+        median_chips.append(chipids[i])
+    if contactheight[i] == next_highest:
+        next_chips.append(chipids[i])
+    if contactheight[i] == max_height:
+        max_chips.append(chipids[i])
+    if contactheight[i] == min_height:
+        min_chips.append(chipids[i])
+
 #make dictionaries
 low_dict = {k:v for k,v in zip(low,low_c)}
 medlow_dict = {k:v for k,v in zip(medlow,medlow_c)}
@@ -107,8 +124,18 @@ for (chip_status, chip_value), x in chip_statuses.items():
         wafer_map.set_chip(eval(chips), chip_status, subtext)
         loop = loop + 1
     
+#printing stats
 print(f'Range: {min_height}um to {max_height}um ({max_height-min_height}um)')
-print(f'Bins:\n - Low (l): {min_height}-{int(min_height+bin_size)}um\n - Medium low (ml): {int(min_height+bin_size)}-{int(min_height+bin_size*2)}um\n - Medium high (mh): {int(min_height+bin_size*2)}-{int(min_height+bin_size*3)}um\n - High (h): {int(min_height+bin_size*3)}-{int(max_height)}um')
+print(f'Bins:\n - Low (l):          {min_height}-{int(min_height+bin_size)}um\n - Medium low (ml):  {int(min_height+bin_size)}-{int(min_height+bin_size*2)}um\n - Medium high (mh): {int(min_height+bin_size*2)}-{int(min_height+bin_size*3)}um\n - High (h):         {int(min_height+bin_size*3)}-{int(max_height)}um')
+print(f'Mean: {round(np.mean(contactheight),3)}um')
+print(f'Median: {int(np.median(contactheight))}um')
+print(f'Mode: {stats.mode(contactheight)[0]}um')
+if median in contactheight:
+    print(f'Chips at median height: {", ".join(median_chips)}')
+elif median not in contactheight:
+    print(f'Calculated median not in data set. Chips at next highest height ({next_highest}um): {next_chips}')
+print(f'Chips at maximum height: {", ".join(max_chips)}')
+print(f'Chips at minimum height: {", ".join(min_chips)}')
 
 #CHANGE OUT PATH
 dir = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Topography-Maps')
