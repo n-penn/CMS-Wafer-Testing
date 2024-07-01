@@ -1,4 +1,7 @@
 #multiple files and separate stats for each one
+#Entire document title here, leave blank for no title:
+TITLE = "2nd probe card"
+
 import re
 import os
 import sys
@@ -231,6 +234,7 @@ for file_name, modification_time in files:
             can = canvas.Canvas(output_filename, pagesize=letter)
             # Define text content
             style_sheet = getSampleStyleSheet()
+            style_sheet['Normal'].fontName = 'Times-Roman'
             normal_style = style_sheet['Normal']
             text_content = [
                 f"Wafer ID: {waferid}",
@@ -264,6 +268,10 @@ for file_name, modification_time in files:
             y = 720
 
             # Write content to the PDF
+            can.setFont('Times-Roman', 20)
+            if len(TITLE) > 0:
+                can.drawString(72, y, TITLE) 
+                y-= 20
             for line in text_content:
                 leading_spaces = len(line) - len(line.lstrip()) #to help other_errors format as bullet points
                 if leading_spaces > 0:
@@ -271,7 +279,7 @@ for file_name, modification_time in files:
                     if y<40:
                         can.showPage()
                         y = 720
-                    paragraph = Paragraph(line)    
+                    paragraph = Paragraph(line, style_sheet['Normal'])    
                     width, height = paragraph.wrap(468, 720)
                     paragraph.drawOn(can, 72 + leading_spaces_width, y - height)
                     y -= (height + 4)
@@ -279,7 +287,7 @@ for file_name, modification_time in files:
                     if y<40:
                         can.showPage()
                         y = 720
-                    paragraph = Paragraph(line)    
+                    paragraph = Paragraph(line, style_sheet['Normal'])    
                     width, height = paragraph.wrap(468, 720)
                     paragraph.drawOn(can, 72, y - height)
                     y -= (height + 4)

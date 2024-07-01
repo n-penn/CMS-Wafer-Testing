@@ -1,4 +1,7 @@
 #Analyze errors of all files in a folder
+#Entire document title here, leave blank for no title:
+TITLE = "1st probe card"
+
 import re
 import os
 import sys
@@ -241,6 +244,7 @@ def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, sca
     can = canvas.Canvas(output_filename, pagesize=letter)
     # Define text content
     style_sheet = getSampleStyleSheet()
+    style_sheet['Normal'].fontName = 'Times-Roman'
     normal_style = style_sheet['Normal']
     text_content = [
         f"Wafer ID: {', '.join(allwaferids)}",
@@ -274,6 +278,10 @@ def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, sca
     y = 720
 
     # Write content to the PDF
+    can.setFont('Times-Roman', 20)
+    if len(TITLE) > 0:
+        can.drawString(72, y, TITLE) 
+        y-= 20
     for line in text_content:
         leading_spaces = len(line) - len(line.lstrip()) #to help other_errors format as bullet points
         if leading_spaces > 0:
@@ -281,7 +289,7 @@ def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, sca
             if y<40:
                 can.showPage()
                 y = 720
-            paragraph = Paragraph(line)    
+            paragraph = Paragraph(line, style_sheet['Normal'])
             width, height = paragraph.wrap(468, 720)
             paragraph.drawOn(can, 72 + leading_spaces_width, y - height)
             y -= (height + 4)
@@ -289,7 +297,7 @@ def save_to_pdf(output_filename, waferid, log_content, errors, nochiperrors, sca
             if y<40:
                 can.showPage()
                 y = 720
-            paragraph = Paragraph(line)    
+            paragraph = Paragraph(line, style_sheet['Normal'])
             width, height = paragraph.wrap(468, 720)
             paragraph.drawOn(can, 72, y - height)
             y -= (height + 4)
