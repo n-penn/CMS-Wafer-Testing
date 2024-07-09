@@ -1,3 +1,4 @@
 TESTwafermap.py
 **/*.png
 __pycache__/
+config.ini
