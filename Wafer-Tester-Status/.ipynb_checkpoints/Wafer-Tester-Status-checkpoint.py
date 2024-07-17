@@ -1,4 +1,4 @@
-#look at unread emails
+#run this script after starting wafertester
 #note: must have config file in the same folder as this (?maybe)
 import os
 import re
