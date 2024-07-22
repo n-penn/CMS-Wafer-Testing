@@ -114,6 +114,7 @@ def read_log_file(): #open the most recent log file
 
 def get_status(): #calculates all variables that refer to the status of the wafer
     log_content = read_log_file()
+    global waferfinished
     waferid = ''
     waferfinished = 'False'
     waferstatus = 'Still testing'
@@ -182,27 +183,20 @@ def get_status(): #calculates all variables that refer to the status of the wafe
     finaltimematch = re.search(timepattern, log_content[len(log_content)-1])
     first_time = firsttimematch.group(1)
     first_dt = datetime.strptime(first_time, "%Y-%m-%d %H:%M:%S,%f")
+    global final_dt
     final_time = finaltimematch.group(1)
     final_dt = datetime.strptime(final_time, "%Y-%m-%d %H:%M:%S,%f")
     time_diff = final_dt - first_dt
+    final_dt = final_dt.strftime("%m-%d-%Y %H:%M:%S")
     
-    # Format the elapsed time NEW
+    # Format the elapsed time
     total_seconds = int(time_diff.total_seconds())
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
-
     if hours > 0:
         time_elapsed = f"{hours}h {minutes}m {seconds}s"
     else:
         time_elapsed = f"{minutes}m {seconds}s"
-        
-    #time_format = "%H:%M:%S.%f"
-    #dt = datetime.strptime(str(time_diff), time_format)
-    #hours = dt.hour
-    #minutes = dt.minute
-    #seconds = dt.second
-    #microseconds = dt.microsecond
-    #time_elapsed = str(hours) + 'h ' + str(minutes) + 'm ' + str(seconds) + 's'
     
     #est time remaining, based off number of chips completed and chips to test number FIXME THIS IS WRONG
     complete = len(chips_tested) + chips_aborted
@@ -239,11 +233,8 @@ def get_status(): #calculates all variables that refer to the status of the wafe
         line = log_content[i]
         chip_error_match = re.search(chip_error_pattern, line)
         if chip_error_match:
-            print(f"chip_error_match")
             chip_id = chip_error_match.group(2)
-            print(chip_id)
             error = chip_error_match.group(3)
-            print(error)
             error_chip_match = re.search(error_chip_pattern, error)
             if error_chip_match:
                 to_remove = error_chip_match.group(1)
@@ -258,13 +249,10 @@ def get_status(): #calculates all variables that refer to the status of the wafe
                 error_line_dict[chip_id] = [str(i+1)]
         if last_line < i:
             last_line = i
-    print("chip error dict " + str(chip_error_dict))
-    print("error line dict " + str(error_line_dict))
     #use find_consecutive_sequences to find consecutive error chips and add them to the list
     to_add = find_consecutive_sequences(testing_order, list(chip_error_dict.keys()), N1)
     for item in to_add:
         cons_chips_with_errors.append(item)
-    print(f"cons chips with errors line 251: {cons_chips_with_errors}")
 
     #find consecutive chips with errors
     errors_chips_dict = {}  # Dictionary to store {error: [chips]}
@@ -291,7 +279,7 @@ def send_status(sender, subject, body): #add to the body of the email to be sent
     if waferfinished == 'True':
         to_body += f'Wafer finished at {testing_completed}.\n'
     if waferfinished == 'False':
-        to_body += f'Wafer has not completed.\n'
+        to_body += f'Wafer has not completed testing.\n'
     if "current" or "all" in body: #print last started chip
         if current_chip == 'None':
             to_body += f'No chips have begun testing.\n'
@@ -332,7 +320,20 @@ def add_email(sender): #add the sender's email to mailing list
     emails = read_mailing_list(file_name)
     if sender not in emails:
         write_mailing_list(file_name, sender)
-    print(f'Email added: {sender}')
+        print(f'Email added: {sender}')
+        to_email = sender
+        to_subject = "Wafer Tester Status: Email Added"
+        to_body = f'Your email, {sender}, was added to the wafer tester status mailing list. You will receive emails when the wafer has finished, when there are {N1} or more consecutive chips with errors or {N2} or more consecutive chips with the same error.\nTo be removed from the mailing list, send an email to {FROM_EMAIL} with the subject line "Remove".\nTo receive an email with information about the wafer\'s status, send an email to {FROM_EMAIL} with the subject "Status" and any of the following commands in the body:\n   - current (what chip it is currently testing)\n   - last (which chip most recently completed testing, if any)\n   - time (time elapsed)\n   - chips (how many chips have completed testing)\n   - contact (average contact resistance of tested chips)\n   - all (all of the above)\nPlease visit https://github.com/n-penn/CMS-Wafer-Testing.git for more information.'
+        em = EmailMessage()
+        em['From'] = FROM_NAME + " <" + FROM_EMAIL + ">"
+        em['To'] = to_email
+        em['Subject'] = to_subject
+        em.set_content(to_body)
+        context = ssl.create_default_context() #Set SSL security
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+            smtp.login(FROM_EMAIL, FROM_PWD)
+            smtp.sendmail(FROM_EMAIL, to_email, em.as_string())
+    
 
 def remove_email(sender): #remove sender's email from mailing list
     file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
@@ -351,11 +352,14 @@ def send_email(sender, subject, body): #actually sends the email to the person w
     to_body, waferid, waferstatus = send_status(sender, subject, body)
     now = datetime.now()
     now = now.strftime("%m-%d-%Y %H:%M:%S")
-    to_subject = f'Wafer {waferid} Status: {waferstatus} ({now})'
+    if waferfinished == 'True':
+        to_subject = f'Wafer {waferid} Status: {waferstatus} at {final_dt}'
+    if waferfinished == 'False':
+        to_subject = f'Wafer {waferid} Status: {waferstatus} at {now}'
     
     #Actually sending email:
     em = EmailMessage()
-    em['From'] = FROM_EMAIL
+    em['From'] = FROM_NAME + " <" + FROM_EMAIL + ">"
     em['To'] = to_email
     em['Subject'] = to_subject
     em.set_content(to_body)
@@ -374,6 +378,8 @@ def check():
     config.read('config.ini')
     global FROM_EMAIL
     FROM_EMAIL = config.get('Gmail', 'email')
+    global FROM_NAME
+    FROM_NAME = config.get('Gmail', 'name')
     global FROM_PWD
     FROM_PWD = config.get('Gmail', 'passcode')
     global SMTP_SERVER
@@ -449,9 +455,7 @@ def check():
         if chip not in sent_error_chips:
             chips_to_send.append(chip)
     #use this for actually sending emails
-    print("Checking N1")
     if len(chips_to_send) >= N1:
-        print("sending for N1")
         lines = []
         for chip in chips_to_send:
             if chip in error_line_dict:
@@ -474,7 +478,7 @@ def check():
         for entry in mailing_list:
             to_email = entry
             em = EmailMessage()
-            em['From'] = FROM_EMAIL
+            em['From'] = FROM_NAME + " <" + FROM_EMAIL + ">"
             em['To'] = to_email
             em['Subject'] = to_subject
             em.set_content(to_body)
@@ -495,7 +499,6 @@ def check():
                     error_msgs_to_send.append(k)
     #use this for actually sending emails
     if len(error_chips_to_send) >= N2:
-        print("sending for N2")
         for chip in chips_to_send:
             sent_error_chips2.append(chip)
         to_body = f'Offending errors and their chips:\n\n'        
@@ -504,7 +507,7 @@ def check():
                 lst = ', '.join(errors_chips_dict[error])
                 to_body += f'  - {error}: {lst}\n'
             else:
-                print("Error not in dictionary")
+                print("Error {error} not in dictionary")
         now = datetime.now()
         now = now.strftime("%m-%d-%Y %H:%M:%S")
         to_subject = f'Warning: {N2} or more consecutive chips with the same error for Wafer {waferid} at {now}!'
@@ -518,7 +521,7 @@ def check():
         for entry in mailing_list:
             to_email = entry
             em = EmailMessage()
-            em['From'] = FROM_EMAIL
+            em['From'] = FROM_NAME + " <" + FROM_EMAIL + ">"
             em['To'] = to_email
             em['Subject'] = to_subject
             em.set_content(to_body)
@@ -532,7 +535,7 @@ def check():
     if waferfinished == 'True':
         now = datetime.now()
         now = now.strftime("%m-%d-%Y %H:%M:%S")
-        to_subject = f'{waferstatus} for Wafer {waferid} at {now}!'
+        to_subject = f'{waferstatus} for Wafer {waferid} at {final_dt}!'
         to_body = f'The wafer has finished testing at {final_dt} and the elapsed time is {time_elapsed}.\n{len(chips_tested)} chips were completed.\n'
         if len(errorlines) > 0:
             to_body = to_body + f'Possible errors: \n'
@@ -544,7 +547,7 @@ def check():
         for entry in mailing_list:
             to_email = entry
             em = EmailMessage()
-            em['From'] = FROM_EMAIL
+            em['From'] = FROM_NAME + " <" + FROM_EMAIL + ">"
             em['To'] = to_email
             em['Subject'] = to_subject
             em.set_content(to_body)
