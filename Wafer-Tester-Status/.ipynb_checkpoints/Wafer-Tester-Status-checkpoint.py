@@ -17,25 +17,62 @@ import time
 #Starting message
 print('Starting Wafer-Tester-Status script. Please do not close this script until wafer testing has completed. For more information, please visit https://github.com/n-penn/CMS-Wafer-Testing/')
 
+#config
+N1 = 3 #consecutive chips that report any error
+N2 = 2 #consecutive chips that report the same error
+testing_order = ['81', '71', '61', '42', '52', '62', '72', '82', '92', 'A2', 'B3', 'A3', '93', '83', '73', '63', '53', '43', '33', '24', '34', '44', '54', '64', '74', '84', '94', 'A4', 'B4', 'C5', 'B5', 'A5', '95', '85', '75', '65', '55', '45', '35', '25', '26', '36', '46', '56', '66', '76', '86', '96', 'A6', 'B6', 'C6', 'C7', 'B7', 'A7', '97', '87', '77', '67', '57', '47', '37', '27', '17', '18', '28', '38', '48', '58', '68', '78', '88', '98', 'A8', 'B8', 'C8', 'D8', 'C9', 'B9', 'A9', '99', '89', '79', '69', '59', '49', '39', '29', '19', '2A', '3A', '4A', '5A', '6A', '7A', '8A', '9A', 'AA', 'BA', 'CA', 'CB', 'BB', 'AB', '9B', '8B', '7B', '6B', '5B', '4B', '3B', '2B', '3C', '4C', '5C', '6C', '7C', '8C', '9C', 'AC', 'BC', 'BD', 'AD', '9D', '8D', '7D', '6D', '5D', '4D', '3D', '4E', '5E', '6E', '7E', '8E', '9E', '7F', '6F']
+
 #initialize
 waferfinished = 'False'
+last_line = 0
+cons_chips_with_errors = []
+sent_error_chips = []
+sent_error_chips2 = []
+chip_error_dict = {}
+error_line_dict = {}
 
 #define functions
+def find_consecutive_sequences(a, b, N1): #function to find consecutive sequences (chips)
+    consecutive_sequences = []
+    i = 0
+    while i < len(b):
+        current_sequence = [b[i]]
+        j = i + 1
+        while j < len(b):
+            if b[j] == a[a.index(current_sequence[-1]) + 1]:
+                current_sequence.append(b[j])
+            else:
+                break
+            j += 1
+        if len(current_sequence) >= N1:
+            consecutive_sequences.extend(current_sequence) #use append for groups of lists
+            i = j  # Move to the next element after the found sequence
+        else:
+            i += 1
+    return consecutive_sequences
+
 def read_log_file(): #open the most recent log file
     #initialize
     root_dir = glob.glob(os.path.expanduser('~/WLT/WLT_v1.2.1/croc_wlt/data'))[0]
+    if os.path.exists(root_dir):
+        print(f"Directory '{root_dir}' exists.")
+    else:
+        print(f"Directory '{root_dir}' does not exist.")
     most_recent_dir = None
     most_recent_time = datetime.min
 
+    folder_pattern = r'wafer\_\S\S\S\S\S\S\-\S\S\S\S'
     #find most recent wafer folder
     for folder in os.listdir(root_dir):
         if os.path.isdir(os.path.join(root_dir, folder)):
-            full_path = os.path.join(root_dir, folder)
-            modified_time = datetime.fromtimestamp(os.path.getmtime(full_path))
-            if modified_time > most_recent_time:
-                most_recent_time = modified_time
-                most_recent_dir = full_path
-
+            folder_match = re.search(folder_pattern, folder)
+            if folder_match:
+                full_path = os.path.join(root_dir, folder)
+                modified_time = datetime.fromtimestamp(os.path.getmtime(full_path))
+                if modified_time > most_recent_time:
+                    most_recent_time = modified_time
+                    most_recent_dir = full_path
+    print(f'Most recent directory: {most_recent_dir}')
     #find most recent subdirectory
     most_recent_subdir = None
     most_recent_time = datetime.min
@@ -47,7 +84,8 @@ def read_log_file(): #open the most recent log file
                 if modified_time > most_recent_time:
                     most_recent_time = modified_time
                     most_recent_subdir = full_path
-
+    print(f'Most recent subdirectory: {most_recent_subdir}')
+    
     #find most recent log file
     most_recent_file = None
     most_recent_time = None
@@ -147,13 +185,24 @@ def get_status(): #calculates all variables that refer to the status of the wafe
     final_time = finaltimematch.group(1)
     final_dt = datetime.strptime(final_time, "%Y-%m-%d %H:%M:%S,%f")
     time_diff = final_dt - first_dt
-    time_format = "%H:%M:%S.%f"
-    dt = datetime.strptime(str(time_diff), time_format)
-    hours = dt.hour
-    minutes = dt.minute
-    seconds = dt.second
-    microseconds = dt.microsecond
-    time_elapsed = f"{hours}h {minutes}m {seconds}s"
+    
+    # Format the elapsed time NEW
+    total_seconds = int(time_diff.total_seconds())
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    if hours > 0:
+        time_elapsed = f"{hours}h {minutes}m {seconds}s"
+    else:
+        time_elapsed = f"{minutes}m {seconds}s"
+        
+    #time_format = "%H:%M:%S.%f"
+    #dt = datetime.strptime(str(time_diff), time_format)
+    #hours = dt.hour
+    #minutes = dt.minute
+    #seconds = dt.second
+    #microseconds = dt.microsecond
+    #time_elapsed = str(hours) + 'h ' + str(minutes) + 'm ' + str(seconds) + 's'
     
     #est time remaining, based off number of chips completed and chips to test number FIXME THIS IS WRONG
     complete = len(chips_tested) + chips_aborted
@@ -182,16 +231,62 @@ def get_status(): #calculates all variables that refer to the status of the wafe
             errorlines.append(line)
     errorlines = list(filter(lambda line: line.strip() != '', errorlines)) #remove blank lines
     
+    #find chips with errors, then add to the chip error and error line dictionaries
+    chip_error_pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \| ChipTester \(\S\S\S\S\-(\w\w)\) \| ERROR    \| (.*)'
+    error_chip_pattern = fr'.*{waferid}\-(\S\S).*'
+    global last_line
+    for i in range(last_line, len(log_content)):
+        line = log_content[i]
+        chip_error_match = re.search(chip_error_pattern, line)
+        if chip_error_match:
+            print(f"chip_error_match")
+            chip_id = chip_error_match.group(2)
+            print(chip_id)
+            error = chip_error_match.group(3)
+            print(error)
+            error_chip_match = re.search(error_chip_pattern, error)
+            if error_chip_match:
+                to_remove = error_chip_match.group(1)
+                error = error.replace(to_remove, '') 
+            if chip_id in chip_error_dict:
+                chip_error_dict[chip_id].append(error)
+            else:
+                chip_error_dict[chip_id] = [error]
+            if chip_id in error_line_dict:
+                error_line_dict[chip_id].append(str(i+1))
+            else:
+                error_line_dict[chip_id] = [str(i+1)]
+        if last_line < i:
+            last_line = i
+    print("chip error dict " + str(chip_error_dict))
+    print("error line dict " + str(error_line_dict))
+    #use find_consecutive_sequences to find consecutive error chips and add them to the list
+    to_add = find_consecutive_sequences(testing_order, list(chip_error_dict.keys()), N1)
+    for item in to_add:
+        cons_chips_with_errors.append(item)
+    print(f"cons chips with errors line 251: {cons_chips_with_errors}")
+
+    #find consecutive chips with errors
+    errors_chips_dict = {}  # Dictionary to store {error: [chips]}
+    for i in range(len(testing_order) - (N2-1)):
+        unique_errors = []
+        for j in range(0, N2-1):
+            unique_errors.extend(chip_error_dict.get(testing_order[i+j], []))
+        unique_errors = set(unique_errors)
+
+        # Add each error to dictionary c with the corresponding chips
+        for error in unique_errors:
+            if all(error in chip_error_dict.get(testing_order[i + j], []) for j in range(N2)):
+                if error not in errors_chips_dict:
+                    errors_chips_dict[error] = []
+                errors_chips_dict[error].extend(testing_order[i:i + N2])
+    
     #return variables
-    return waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines
+    return log_content, waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines, chip_error_dict, cons_chips_with_errors, error_line_dict, errors_chips_dict
 
 def send_status(sender, subject, body): #add to the body of the email to be sent
     to_body = ''
-    status = get_status()
-    if isinstance(status, tuple) and len(status) == 13:
-        waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines = status
-    else:
-        print("Error occurred in get_status()")
+    log_content, waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines, chip_error_dict, cons_chips_with_errors, error_line_dict, errors_chips_dict = get_status()
     #add to body
     if waferfinished == 'True':
         to_body += f'Wafer finished at {testing_completed}.\n'
@@ -343,9 +438,97 @@ def check():
             # Mark the email as read
             mail.store(uid, '+FLAGS', '\Seen')
 
-    #Send email if wafer is finished
+    log_content, waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines, chip_error_dict, cons_chips_with_errors, error_line_dict, errors_chips_dict = get_status()
+
     #ONLY let this run if it's inside the loop or if mailing_list.txt is blank
-    waferid, waferfinished, waferstatus, testing_completed, chips_tested, chips_aborted, current_chip, last_tested, final_dt, time_elapsed, time_remaining, analog_contact_avg, errorlines = get_status()
+
+    #send email if there are N1 or more consecutive chips that have errors
+    #make a list of any new error chips (within sequences) that haven't been sent yet so this doesn't keep sending emails while it runs
+    chips_to_send = []
+    for chip in cons_chips_with_errors:
+        if chip not in sent_error_chips:
+            chips_to_send.append(chip)
+    #use this for actually sending emails
+    print("Checking N1")
+    if len(chips_to_send) >= N1:
+        print("sending for N1")
+        lines = []
+        for chip in chips_to_send:
+            if chip in error_line_dict:
+                for line_no in error_line_dict[chip]:
+                    lines.append(line_no)
+            sent_error_chips.append(chip)
+        to_body = f'Offending lines:\n\n'        
+        for line in lines:
+            to_body += f'{line} {log_content[int(line)-1]}\n'
+        now = datetime.now()
+        now = now.strftime("%m-%d-%Y %H:%M:%S")
+        to_subject = f'Warning: 3 or more consecutive chips with errors for Wafer {waferid} at {now}!'
+        if len(errorlines) > 0:
+                to_body = to_body + f'Other possible errors: \n\n'
+                for error in errorlines:
+                    to_body = to_body + f'{error}\n'
+        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+        mailing_list = read_mailing_list(file_name)
+        #Actually sending email to each address in the file
+        for entry in mailing_list:
+            to_email = entry
+            em = EmailMessage()
+            em['From'] = FROM_EMAIL
+            em['To'] = to_email
+            em['Subject'] = to_subject
+            em.set_content(to_body)
+            context = ssl.create_default_context() #Set SSL security
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                smtp.login(FROM_EMAIL, FROM_PWD)
+                smtp.sendmail(FROM_EMAIL, to_email, em.as_string())
+            print(f'Sent "consecutive chips with errors" email to {to_email}')
+        
+    #send email for if there are N2 or more chips in a row with the same error
+    error_chips_to_send = []
+    error_msgs_to_send = []
+    for k,v in errors_chips_dict.items():
+        if type(v) == list:
+            for item in v:
+                if item not in sent_error_chips2:
+                    error_chips_to_send.append(item)
+                    error_msgs_to_send.append(k)
+    #use this for actually sending emails
+    if len(error_chips_to_send) >= N2:
+        print("sending for N2")
+        for chip in chips_to_send:
+            sent_error_chips2.append(chip)
+        to_body = f'Offending errors and their chips:\n\n'        
+        for error in set(error_msgs_to_send):
+            if error in errors_chips_dict: 
+                lst = ', '.join(errors_chips_dict[error])
+                to_body += f'  - {error}: {lst}\n'
+            else:
+                print("Error not in dictionary")
+        now = datetime.now()
+        now = now.strftime("%m-%d-%Y %H:%M:%S")
+        to_subject = f'Warning: {N2} or more consecutive chips with the same error for Wafer {waferid} at {now}!'
+        if len(errorlines) > 0:
+            to_body = to_body + f'\nOther possible errors: \n'
+            for error in errorlines:
+                to_body = to_body + f'{error}'
+        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+        mailing_list = read_mailing_list(file_name)
+        #Actually sending email to each address in the file
+        for entry in mailing_list:
+            to_email = entry
+            em = EmailMessage()
+            em['From'] = FROM_EMAIL
+            em['To'] = to_email
+            em['Subject'] = to_subject
+            em.set_content(to_body)
+            context = ssl.create_default_context() #Set SSL security
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                smtp.login(FROM_EMAIL, FROM_PWD)
+                smtp.sendmail(FROM_EMAIL, to_email, em.as_string())
+            print(f'Sent consecutive chips with same errors email to {to_email}')
+        
+    #Send email if wafer is finished
     if waferfinished == 'True':
         now = datetime.now()
         now = now.strftime("%m-%d-%Y %H:%M:%S")
@@ -358,24 +541,22 @@ def check():
         file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
         mailing_list = read_mailing_list(file_name)
         #Actually sending email to each address in the file
-        if len(mailing_list) > 0 :
-            for entry in mailing_list:
-                to_email = entry
-                em = EmailMessage()
-                em['From'] = FROM_EMAIL
-                em['To'] = to_email
-                em['Subject'] = to_subject
-                em.set_content(to_body)
-                context = ssl.create_default_context() #Set SSL security
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
-                    smtp.login(FROM_EMAIL, FROM_PWD)
-                    smtp.sendmail(FROM_EMAIL, to_email, em.as_string())
-                print(f'Sent email to {email}')
-        else:
-            pass
-
+        for entry in mailing_list:
+            to_email = entry
+            em = EmailMessage()
+            em['From'] = FROM_EMAIL
+            em['To'] = to_email
+            em['Subject'] = to_subject
+            em.set_content(to_body)
+            context = ssl.create_default_context() #Set SSL security
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                smtp.login(FROM_EMAIL, FROM_PWD)
+                smtp.sendmail(FROM_EMAIL, to_email, em.as_string())
+            print(f'Sent "wafer finished" email to {to_email}')
+            
     mail.close() #close mailbox
     mail.logout() #end imap session
+    
     # Simulating a condition check
     return waferfinished 
 
@@ -385,4 +566,4 @@ while waferfinished == 'False':
     if waferfinished == 'True':
         print('Testing complete, ending Wafer-Tester-Status script.')
         break
-    time.sleep(30)  # Sleep for 30 seconds 
+    time.sleep(20)  # Sleep for 30 seconds 
