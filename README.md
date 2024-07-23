@@ -29,8 +29,10 @@ Checking status:
   - In the body of the email, write any of the following words (to be upated):
     - current (what chip it is currently testing)
     - last (which chip most recently completed testing, if any)
-    - time (time elapsed)
     - chips (how many chips have completed testing) 
+    - time (time elapsed)
+    - remaining (time remaining)
+    - all (all of the above)
 
 Mailing list:
   - To be added to the mailing list, send an email to youremail@example.com with the subject "Add".
