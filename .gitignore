@@ -1,4 +1,4 @@
-TESTwafermap.py
 **/*.png
+**/*.jpg
+*.jpg
 __pycache__/
-Error-Tracking/07-20-2024.16:25:40.Wafer07G5errors.pdf
