@@ -2,3 +2,6 @@
 **/*.jpg
 *.jpg
 __pycache__/
+Contact-Resistance/run_CR_log.ipynb
+Contact-Resistance/.ipynb_checkpoints/Contact_Resistance_Over_Time-checkpoint.py
+Topography-Maps/data/
