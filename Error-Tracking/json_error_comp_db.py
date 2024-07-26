@@ -11,7 +11,7 @@ import numpy as np
 from collections import Counter
 
 #open file
-folders = ['~/WLT/WLT_v1.2.1/croc_wlt/data/wafer_NC0W14-05*/2024*/plots/db/', '~/WLT/WLT_v1.2.1/croc_wlt/data/Desktop/wafer_NC0W14-07*/2024*/plots/db/']
+folders = ['~/WLT/WLT_v1.4.1/croc_wlt/data/wafer_NC0W14-05*/2024*/plots/db/', '~/WLT/WLT_v1.4.1/croc_wlt/data/Desktop/wafer_NC0W14-07*/2024*/plots/db/']
 pattern = r'chip_(.*).json'
 errors = []
 for folder in folders: 

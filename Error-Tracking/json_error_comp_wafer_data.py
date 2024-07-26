@@ -17,7 +17,7 @@ graytests = {}
 extra = {} #for chips/tests with status 3--what does that mean??
 
 #open file
-folderpaths = ['~/WLT/WLT_v1.2.1/croc_wlt/data/wafer_NC0W14-03B6/20240627_115829/plots/_wafer_data_NC0W14-03B6_20240627_115829.json', '~/WLT/WLT_v1.2.1/croc_wlt/data/wafer_NC0W14-04B1/20240624_164933/plots/_wafer_data_NC0W14-04B1_20240624_164933.json', '~/WLT/WLT_v1.2.1/croc_wlt/data/wafer_NC0W14-06H2/20240625_164506/plots/_wafer_data_NC0W14-06H2_20240625_164506.json']
+folderpaths = ['~/WLT/WLT_v1.4.1/croc_wlt/data/wafer_NC0W14-03B6/20240627_115829/plots/_wafer_data_NC0W14-03B6_20240627_115829.json', '~/WLT/WLT_v1.4.1/croc_wlt/data/wafer_NC0W14-04B1/20240624_164933/plots/_wafer_data_NC0W14-04B1_20240624_164933.json', '~/WLT/WLT_v1.4.1/croc_wlt/data/wafer_NC0W14-06H2/20240625_164506/plots/_wafer_data_NC0W14-06H2_20240625_164506.json']
 for filepath in folderpaths:
     with open(os.path.expanduser(filepath), 'r') as file:
         data = json.load(file)

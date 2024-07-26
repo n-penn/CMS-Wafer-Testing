@@ -53,7 +53,7 @@ def find_consecutive_sequences(a, b, N1): #function to find consecutive sequence
 
 def read_log_file(): #open the most recent log file
     #initialize
-    root_dir = glob.glob(os.path.expanduser('~/WLT/WLT_v1.2.1/croc_wlt/data'))[0]
+    root_dir = glob.glob(os.path.expanduser('~/WLT/WLT_v1.4.1/croc_wlt/data'))[0]
     if os.path.exists(root_dir):
         #print(f"Directory '{root_dir}' exists.")
         pass
