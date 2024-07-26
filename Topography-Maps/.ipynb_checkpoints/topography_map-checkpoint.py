@@ -1,20 +1,40 @@
 #Topography map python
 import os
-import numpy as np
+import sys
 import re
+import numpy as np
+from scipy import stats
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as mticker
 from wlt.duts.wafers import WAFER_MAPS
 from wlt.wafermap import WaferMap
         
+#Check sys args
+if len(sys.argv) == 2:
+    file_path = sys.argv[1]
+else:
+    print(f"Error: please provide a valid number of command-line arguments")
+    sys.exit(1)
+
+if not os.path.isfile(file_path):
+    print(f"Error: '{file_path}' is not a valid file path.")
+    sys.exit(1)
+
 #Open file
-with open(os.path.expanduser('~/Desktop/log_files/2nd_probe_card/wafer_NC0W14-03B6_20240627_115829.log'), 'r') as file:
-    log_content = file.readlines()
+try:
+    with open(file_path, 'r') as file:
+        log_content = file.readlines()
+except FileNotFoundError:
+    print(f"Error: File '{file_path}' not found.")
+except IOError as e:
+    print(f"Error: {e}")
 
 #Set up patterns
-waferpattern = r'Wafer: (\w\w\w\w)'
-waferid = ""
+waferbatch_pattern = r'.*Batch: (.*)'
+waferid_pattern = r'.*Wafer: (.*)'
+wafer_batch = ''
+wafer_id = ''
 chippattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \| WaferTester \((\S\S\S\S)\)   \| INFO     \| Testing chip \S\S\S\S\S\S\S\S\S\S\S\S(\S\S)'
 contactpattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \| WaferTester \((\S\S\S\S)\)   \| INFO     \| Found contact height: (.*)'
 chipids = []
@@ -22,14 +42,17 @@ contactheight = []
 for line in log_content:
     chipmatch = re.search(chippattern, line)
     contactmatch = re.search(contactpattern, line)
-    wafermatch = re.search(waferpattern, line)
+    waferbatch_match = re.search(waferbatch_pattern, line)
+    waferid_match = re.search(waferid_pattern, line)
+    if waferbatch_match:
+        wafer_batch = waferbatch_match.group(1)
+    if waferid_match:
+        wafer_id = waferid_match.group(1)
     if chipmatch:
         chipid = str(chipmatch.group(3))
         chipids.append(chipid)
-    elif contactmatch:
+    if contactmatch:
         contactheight.append(contactmatch.group(3))
-    elif wafermatch:
-        waferid = str(wafermatch.group(1))
                              
 #Organize data
 contactheight = [int(i[:5]) for i in contactheight]
@@ -80,6 +103,7 @@ if median not in contactheight:
     greater_than_median = [num for num in contactheight if num > median]
     next_highest = min(greater_than_median)
     '''number of chips at next highest value above median'''
+else: next_highest = None
 median_chips = []
 next_chips = []
 max_chips = []
@@ -117,7 +141,7 @@ WaferMap.STATUS_NAMES =  {1: 'l',       2: 'ml',       3: 'mh',       4: 'h'}
 #Create map
 loop = 0
 ch_type ='CROCv2'
-wafer_map = WaferMap(chip_type=ch_type, title=f'{ch_type} (range: {min_height}um to {max_height}um)')
+wafer_map = WaferMap(chip_type=ch_type, title=f'Wafer {wafer_batch}-{wafer_id} Contact Height (range: {min_height}um to {max_height}um)')
 for (chip_status, chip_value), x in chip_statuses.items():
     for chips,heights in x.items():
         subtext = f"{heights}um"
@@ -141,6 +165,6 @@ print(f'Chips at minimum height: {", ".join(min_chips)}')
 dir = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Topography-Maps')
 
 #Save map
-out_path = os.path.join(dir, f'topography_map_{ch_type}_{waferid}.pdf')
+out_path = os.path.join(dir, f'Topography_map_{wafer_batch}-{wafer_id}.png')
 wafer_map.save(out_path)
 print(f'+ Saved wafer map: {out_path}')

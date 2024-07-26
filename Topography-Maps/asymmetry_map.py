@@ -1,22 +1,40 @@
 #Asymmetry map
 import os
-import glob
+import sys
+import re
 import numpy as np
 from scipy import stats
-import re
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.ticker as mticker
 from wlt.duts.wafers import WAFER_MAPS
 from wlt.wafermap import WaferMap
+        
+#Check sys args
+if len(sys.argv) == 2:
+    file_path = sys.argv[1]
+else:
+    print(f"Error: please provide a valid number of command-line arguments")
+    sys.exit(1)
 
-#Open file (change filepath as necessary, glob allows for wildcard usage but it isn't required)
-with open(glob.glob(os.path.expanduser('~/Desktop/log_files/1st*/*05A4*.log'))[0], 'r') as file:
-    log_content = file.readlines()
+if not os.path.isfile(file_path):
+    print(f"Error: '{file_path}' is not a valid file path.")
+    sys.exit(1)
+
+#Open file
+try:
+    with open(file_path, 'r') as file:
+        log_content = file.readlines()
+except FileNotFoundError:
+    print(f"Error: File '{file_path}' not found.")
+except IOError as e:
+    print(f"Error: {e}")
 
 #Set up patterns
-waferpattern = r'Wafer: (\w\w\w\w)'
-waferid = ""
+waferbatch_pattern = r'.*Batch: (.*)'
+waferid_pattern = r'.*Wafer: (.*)'
+wafer_batch = ''
+wafer_id = ''
 chippattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \| WaferTester \((\S\S\S\S)\)   \| INFO     \| Testing chip \S\S\S\S\S\S\S\S\S\S\S\S(\S\S)'
 contactpattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}) \| WaferTester \((\S\S\S\S)\)   \| INFO     \| Found contact height: (.*)'
 asympattern = r'.* \| .* \| .* \| Asymmetry \((.*) um\)'
@@ -28,7 +46,8 @@ asymmetries = []
 for i in range(len(log_content)):
     chipmatch = re.search(chippattern, log_content[i])
     contactmatch = re.search(contactpattern, log_content[i])
-    wafermatch = re.search(waferpattern, log_content[i])
+    waferbatch_match = re.search(waferbatch_pattern, log_content[i])
+    waferid_match = re.search(waferid_pattern, log_content[i])
     if chipmatch:
         chipid = str(chipmatch.group(3))
         chipids.append(chipid)
@@ -50,8 +69,10 @@ for i in range(len(log_content)):
                 print('edge sensor error')
         else:
             print('no match')
-    elif wafermatch:
-        waferid = str(wafermatch.group(1))  
+    if waferbatch_match:
+        wafer_batch = waferbatch_match.group(1)
+    if waferid_match:
+        wafer_id = waferid_match.group(1)  
                 
 #Organize data
 asymmetries = [int(i) for i in asymmetries]
@@ -148,7 +169,7 @@ WaferMap.STATUS_NAMES =  {1: 'l',       2: 'ml',      3: 'm',       4: 'mh',    
 #Create map
 loop = 0
 ch_type ='CROCv2'
-wafer_map = WaferMap(chip_type=ch_type, title=f'{ch_type} Asymmetry (range: {min_height}um to {max_height}um)')
+wafer_map = WaferMap(chip_type=ch_type, title=f'Wafer {wafer_batch}-{wafer_id} Asymmetry (range: {min_height}um to {max_height}um)')
 for (chip_status, chip_value), x in chip_statuses.items():
     for chips,heights in x.items():
         subtext = f"{heights}um"
@@ -172,6 +193,6 @@ print(f'Chips at minimum asymmetry ({min_height}um): {", ".join(min_chips)}')
 dir = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Topography-Maps')
 
 #Save map
-out_path = os.path.join(dir, f'asymmetry_map_{ch_type}_{waferid}.pdf')
+out_path = os.path.join(dir, f'Asymmetry_map_{wafer_batch}-{wafer_id}.png')
 wafer_map.save(out_path)
 print(f'+ Saved wafer map: {out_path}')
