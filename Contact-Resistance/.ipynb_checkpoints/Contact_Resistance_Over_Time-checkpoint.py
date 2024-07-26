@@ -23,7 +23,7 @@ if not os.path.isfile(file_path):
 
 #Open file
 try:
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as file:
         log_content = file.readlines()
 except FileNotFoundError:
     print(f"Error: File '{file_path}' not found.")
@@ -101,6 +101,8 @@ indices = np.linspace(0, len(dates) - 1, num=16, dtype=int)
 plt.xticks([dates[i] for i in indices], [dates[i].strftime('%H:%M') for i in indices])
 
 #Save plot
-file_name = f'Contact_resistance_{test_type}_{wafer_batch}-{wafer_id}.jpg'
+plt.show()
+file_path = "~/Desktop/CMS-Wafer-Testing/Contact-Resistance/"
+file_name = os.path.expanduser(os.path.join(file_path, f'Contact_resistance_{test_type}_{wafer_batch}-{wafer_id}.jpg'))
 plt.savefig(file_name)
 print(f'File saved to ~/Desktop/CMS-Wafer-Testing/Contact-Resistance/{file_name}')
