@@ -370,7 +370,7 @@ def remove_email(sender): #remove sender's email from mailing list
     with open(file_name, 'w') as file:
         for entry in emails:
             if entry != sender:
-                file.write(email)
+                file.write(entry)
     print(f"Email '{sender}' removed successfully from '{file_name}'.")
 
 def send_email(sender, subject, body): #actually sends the email to the person who requested it
