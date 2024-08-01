@@ -3,17 +3,18 @@ Contents of this project:
   - Jupyter and python scripts to analyze and compare the frequency of errors in wafer testing
   - Python script to analyze the contact resistance over time of a wafer test
   - Python scripts to map the topography (contact height) and symmetry per chip of wafers
-  - Jupyter script to compare errors and contact resistance for wafers
+  - Jupyter script to compare errors with contact resistance
   - Python script to send updates on the status of the wafer testing
+  - Draft of cross-wafer comparison script
 
-This code is intended to be used for analysis of RD53B CROC-v2 chips tested on wafers for the CMS HL-LHC upgrade and was written as part of the CMS MREFC EPO 2024 internship at Kansas State University. More information can be found at https://gitlab.cern.ch/croc_testing/croc_wlt.
+This code is intended to be used for analysis of RD53C CROC-v2 chips tested on wafers for the CMS HL-LHC upgrade and was written as part of the CMS MREFC EPO 2024 internship at Kansas State University. More information can be found at https://gitlab.cern.ch/croc_testing/croc_wlt.
 
 Credit to Weston Schwartz (schwartzw on GitHub) for most of the contact resistance code. Special thanks to Andrew Ivanov and Wyatt Jones.
 
 This code will regularly be updated through August 3, 2024, and may be periodically updated afterward. Contact Nat Penn at npenn@bu.edu with questions.
 
 # How to use Wafer-Tester-Status script
-If using this outside K-State, create a separate wafer testing gmail
+If using this outside K-State, create a separate wafer testing gmail account
 Create a config.ini file in the Wafer-Tester-Status directory
   -   first line: [Gmail]
   -   second line: email="example@gmail.com"
@@ -21,9 +22,9 @@ Create a config.ini file in the Wafer-Tester-Status directory
 
 Enable POP/IMAP in email settings (gmail preferred)
 
-Make sure to also download/create the mailing list txt file (in CMS-Wafer-Testing directory) so emails can be added to be notified
+Make sure to also download/create the mailing list txt file (in Wafer-Tester-Status directory) so emails can be added to be notified
 
-Run the script from a separate terminal tab/window while testing wafers. It will end once completed
+Run the script from a separate terminal tab/window after starting waferananlyzer.py. It will terminate on its own once testing is completed.
 
 Checking status:
   - To check the status of testing, send an email to youremail@example.com with the subject "Status".
