@@ -345,7 +345,7 @@ def write_mailing_list(file_name, em_address): #writes to the mailing list file
         file.write(em_address + '\n')
 
 def add_email(sender): #add the sender's email to mailing list
-    file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+    file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Wafer-Tester-Status/mailing_list.txt')
     emails = read_mailing_list(file_name)
     if sender not in emails:
         write_mailing_list(file_name, sender)
@@ -365,12 +365,12 @@ def add_email(sender): #add the sender's email to mailing list
     
 
 def remove_email(sender): #remove sender's email from mailing list
-    file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+    file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Wafer-Tester-Status/mailing_list.txt')
     emails = read_mailing_list(file_name)
     with open(file_name, 'w') as file:
         for entry in emails:
             if entry != sender:
-                file.write(email)
+                file.write(entry)
     print(f"Email '{sender}' removed successfully from '{file_name}'.")
 
 def send_email(sender, subject, body): #actually sends the email to the person who requested it
@@ -494,7 +494,7 @@ def check():
                     to_body = to_body + f'Other possible errors: \n\n'
                     for error in errorlines:
                         to_body = to_body + f'{error}\n'
-            file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+            file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Wafer-Tester-Status/mailing_list.txt')
             mailing_list = read_mailing_list(file_name)
             #Actually sending email to each address in the file
             for entry in mailing_list:
@@ -539,7 +539,7 @@ def check():
             to_body = to_body + f'\nOther possible errors: \n'
             for error in errorlines:
                 to_body = to_body + f'{error}'
-        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Wafer-Tester-Status/mailing_list.txt')
         mailing_list = read_mailing_list(file_name)
         #Actually sending email to each address in the file
         for entry in mailing_list:
@@ -565,7 +565,7 @@ def check():
             to_body = to_body + f'Possible errors: \n'
             for error in errorlines:
                 to_body = to_body + f'{error}\n'
-        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/mailing_list.txt')
+        file_name = os.path.expanduser('~/Desktop/CMS-Wafer-Testing/Wafer-Tester-Status/mailing_list.txt')
         mailing_list = read_mailing_list(file_name)
         #Actually sending email to each address in the file
         for entry in mailing_list:
